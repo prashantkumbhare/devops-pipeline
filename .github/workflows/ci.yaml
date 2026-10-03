@@ -1,0 +1,16 @@
+name: Trading API CI
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  container-tests:
+    uses: ./.github/workflows/reusable-ci.yaml
+    with:
+      test-script: scripts/test-ci.sh
