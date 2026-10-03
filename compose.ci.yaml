@@ -1,0 +1,15 @@
+# Isolated test stack: merge with compose.yaml using project trading-ci.
+services:
+  api:
+    image: trading-api:ci
+    ports: !reset []
+  db:
+    ports: !reset []
+  test:
+    image: python:3.12-slim
+    profiles: [test]
+    volumes:
+      - ./tests:/tests:ro
+    entrypoint: ["python", "/tests/check_api.py"]
+    environment:
+      BASE_URL: http://api:8000

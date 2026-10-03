@@ -1,0 +1,23 @@
+name: Reusable container CI
+on:
+  workflow_call:
+    inputs:
+      test-script:
+        description: Checked-in Bash script that builds and tests the caller application
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build and test containers
+        env:
+          TEST_SCRIPT: ${{ inputs.test-script }}
+        run: bash "$TEST_SCRIPT"
