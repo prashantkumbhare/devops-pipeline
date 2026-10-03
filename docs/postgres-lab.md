@@ -65,7 +65,12 @@ account; separate least-privilege runtime and migration accounts are future work
 
 Verified before this change: valid POST returned 201, invalid quantity zero returned
 422, response request ID matched the JSON log, and restart cleared memory orders.
-PostgreSQL build and runtime checks are pending the learner's commands.
+Verified by the learner on 3 October 2026: both containers healthy, PostgreSQL
+readiness 200, and order dff9c767-0211-4cbd-a66d-4e473dc9142e survived API restart
+and container removal/recreation with its original timestamp. Windows psql also
+retrieved this row through the published port. Stopping the database left liveness
+at 200 while readiness and orders returned 503; starting the database restored both
+to 200 without an API restart. These are manual lab results, not automated CI results.
 
 Related: [first API exercise](first-api-lab.md), [local setup](local-setup.md).
 Sources: [PostgreSQL image](https://hub.docker.com/_/postgres),

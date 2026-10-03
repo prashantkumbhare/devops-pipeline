@@ -1,8 +1,9 @@
 # First trading API exercise
 
-Status: code prepared; container build and runtime checks must be performed by the learner.
+Status: initial API exercise completed locally. The current code now uses PostgreSQL;
+see [the PostgreSQL lab](postgres-lab.md) for current storage behaviour.
 
-This is a synthetic order intake service. ACCEPTED means validation passed, not that a trade was executed. No broker or exchange is connected. Orders live only in one process's memory and disappear on restart. Repeated submissions create separate orders; retry-safe submission and PostgreSQL follow in later increments.
+This is a synthetic order intake service. ACCEPTED means validation passed, not that a trade was executed. No broker or exchange is connected. The initial version stored orders only in process memory; the current version commits them to PostgreSQL. Repeated submissions create separate orders; retry-safe submission remains future work.
 
 ## Run from the repository terminal
 
@@ -33,13 +34,17 @@ In /docs submit an order with quantity 0. Expect HTTP 422 and field details. Loo
 docker compose logs --tail 30 api
 ```
 
-## Demonstrate memory-only storage
+## Historical memory-only storage experiment
+
+This experiment was completed before PostgreSQL was added. With the current code,
+the restart below preserves committed orders rather than clearing them.
 
 ```powershell
 docker compose restart api
 ```
 
-Wait for readiness, then GET /orders. Expect an empty list. Explain why before running this step. This is the reason for the PostgreSQL ticket.
+In the initial version, GET /orders returned an empty list after restart because
+the process dictionary was lost. This motivated adding persistent database storage.
 
 ## Stop
 
@@ -58,4 +63,7 @@ The process listens on 0.0.0.0 inside its container, while Compose publishes por
 
 Dependencies use bounded ranges for this first exercise. A tested lock file and fixed base-image digest are required before claiming reproducible release builds.
 
-Do not close D02 or D03 yet: these exercises need execution evidence, and D03 still requires PostgreSQL and persistence.
+Local execution evidence: valid creation returned 201, invalid quantity returned
+422 with a matching request ID in logs, PostgreSQL orders survived API restart and
+container recreation, and database outage/recovery produced the expected 503/200
+responses. Automated CI checks have not yet been added.
