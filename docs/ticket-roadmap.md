@@ -1,0 +1,26 @@
+# Implementation ticket order
+
+Start with DevOps D01 → D02 → D03 → D05 → D06 → D07. D04 (Codespaces) is optional. AI implementation starts after the DevOps first milestone.
+
+- [D01: [D01] Prepare local VS Code and Docker environment](https://github.com/prashantkumbhare/devops-pipeline/issues/1)
+- [D02: [D02] Build simulated trading order REST API](https://github.com/prashantkumbhare/devops-pipeline/issues/2)
+- [D03: [D03] Run API and PostgreSQL with Docker Compose](https://github.com/prashantkumbhare/devops-pipeline/issues/3)
+- [D04: [D04] Add reproducible Codespaces development configuration](https://github.com/prashantkumbhare/devops-pipeline/issues/4)
+- [D05: [D05] Create reusable CI workflow and meaningful tests](https://github.com/prashantkumbhare/devops-pipeline/issues/5)
+- [D06: [D06] Publish versioned container images and release artifacts](https://github.com/prashantkumbhare/devops-pipeline/issues/6)
+- [D07: [D07] Deploy published release locally and verify health](https://github.com/prashantkumbhare/devops-pipeline/issues/7)
+- [D08: [D08] Implement rollback and controlled failure drills](https://github.com/prashantkumbhare/devops-pipeline/issues/8)
+- [D09: [D09] Add metrics, dashboards and actionable alerts](https://github.com/prashantkumbhare/devops-pipeline/issues/9)
+- [D10: [D10] Provision a separate local infrastructure lab with Terraform](https://github.com/prashantkumbhare/devops-pipeline/issues/10)
+- [D11: [D11] Configure Linux deployment target with Ansible](https://github.com/prashantkumbhare/devops-pipeline/issues/11)
+- [D12: [D12] Deploy to second laptop over home network](https://github.com/prashantkumbhare/devops-pipeline/issues/12)
+- [D13: [D13] Create backup/restore exercise and interview walkthrough](https://github.com/prashantkumbhare/devops-pipeline/issues/13)
+- [A01: [A01] Define incident schema and synthetic trading scenarios](https://github.com/prashantkumbhare/trading-incident-assistant/issues/1)
+- [A02: [A02] Reuse DevOps workflow in AI repository](https://github.com/prashantkumbhare/trading-incident-assistant/issues/2)
+- [A03: [A03] Retrieve public application evidence through HTTP APIs](https://github.com/prashantkumbhare/trading-incident-assistant/issues/3)
+- [A04: [A04] Fetch and validate linked article content](https://github.com/prashantkumbhare/trading-incident-assistant/issues/4)
+- [A05: [A05] Implement actual LLM analysis with structured evidence-based output](https://github.com/prashantkumbhare/trading-incident-assistant/issues/5)
+- [A06: [A06] Score completeness and article applicability separately](https://github.com/prashantkumbhare/trading-incident-assistant/issues/6)
+- [A07: [A07] Evaluate recommendations and prompt injection resistance](https://github.com/prashantkumbhare/trading-incident-assistant/issues/7)
+- [A08: [A08] Add retrieval across runbooks and past incidents](https://github.com/prashantkumbhare/trading-incident-assistant/issues/8)
+- [A09: [A09] Add investigation UI, audit history and interview demonstration](https://github.com/prashantkumbhare/trading-incident-assistant/issues/9)
