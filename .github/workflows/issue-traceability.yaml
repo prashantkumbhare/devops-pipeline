@@ -102,7 +102,7 @@ jobs:
               }));
             }
 
-            const issuePattern = /(^|\s)#([1-9]\d*)\b/;
+            const issuePattern = /(^|[\s(])#([1-9]\d*)\b/;
 
             for (const commit of commits) {
               if (!issuePattern.test(commit.message)) {
