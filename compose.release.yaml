@@ -1,0 +1,4 @@
+services:
+  api:
+    image: ghcr.io/prashantkumbhare/trading-api@sha256:1ab56a9f409c429b5c70363999e8e9779d0ab1d08565ecfd846a4e62577bf576
+    build: !reset null
