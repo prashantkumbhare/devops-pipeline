@@ -1,0 +1,71 @@
+name: Publish tested image
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out tagged code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate release tag and main history
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Use vMAJOR.MINOR.PATCH'; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/trading-api" >> "$GITHUB_ENV"
+      - name: Build and test release candidate
+        run: bash scripts/test-ci.sh
+      - name: Export tested image for scanning
+        run: |
+          mkdir -p release-output
+          docker save trading-api:ci -o release-output/image.tar
+      - name: Scan tested image for fixable high and critical vulnerabilities
+        run: |
+          docker run --rm \
+            -v "$PWD/release-output:/scan:ro" \
+            anchore/grype:v0.120.0 \
+            docker-archive:/scan/image.tar --only-fixed --fail-on high -o json \
+            > release-output/vulnerability-report.json
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Publish the same tested and scanned image
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          docker tag trading-api:ci "$IMAGE:$RELEASE_TAG"
+          docker tag trading-api:ci "$IMAGE:sha-$GITHUB_SHA"
+          docker push "$IMAGE:$RELEASE_TAG"
+          docker push "$IMAGE:sha-$GITHUB_SHA"
+          digest_ref=$(docker image inspect "$IMAGE:$RELEASE_TAG" --format '{{range .RepoDigests}}{{println .}}{{end}}' | grep "^$IMAGE@sha256:" | head -n 1)
+          test -n "$digest_ref"
+          printf 'Version: %s\nCommit: %s\nImage: %s\nDigest reference: %s\n' \
+            "$RELEASE_TAG" "$GITHUB_SHA" "$IMAGE:$RELEASE_TAG" "$digest_ref" \
+            > release-output/release.txt
+          cat release-output/release.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: Store scan report and release record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ github.ref_name }}
+          path: |
+            release-output/vulnerability-report.json
+            release-output/release.txt
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Log out
+        if: always()
+        run: docker logout ghcr.io
