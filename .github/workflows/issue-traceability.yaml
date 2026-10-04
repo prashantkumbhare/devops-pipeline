@@ -1,0 +1,121 @@
+name: Issue traceability
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  traceability:
+    name: Check issue references
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code and history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate issue references
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execFileSync } = require("node:child_process");
+            const failures = [];
+            let commits = [];
+
+            if (context.eventName === "pull_request") {
+              const pr = context.payload.pull_request;
+
+              // A PR must explain its relationship to an issue.
+              const bodyPattern = /\b(?:refs|closes|fixes|resolves)\s+#([1-9]\d*)\b/i;
+              if (!bodyPattern.test(pr.body || "")) {
+                failures.push("PR description needs Refs #<number> or Closes #<number>.");
+              }
+
+              const results = await github.paginate(
+                github.rest.pulls.listCommits,
+                {
+                  ...context.repo,
+                  pull_number: pr.number,
+                  per_page: 100
+                }
+              );
+
+              commits = results.map(item => ({
+                sha: item.sha,
+                message: item.commit.message
+              }));
+            } else {
+              // A push has commit boundaries, but no PR description.
+              const before = context.payload.before;
+              const after = context.payload.after;
+              const zero = /^0+$/;
+
+              if (context.payload.deleted) {
+                core.info("Branch deletion: no commits to validate.");
+                return;
+              }
+
+              let base = before;
+
+              // A newly pushed branch has no previous remote commit.
+              // Check its changes relative to the default branch.
+              let beforeExists = false;
+
+              if (!zero.test(before)) {
+                try {
+                  execFileSync("git", ["cat-file", "-e", `${before}^{commit}`]);
+                  beforeExists = true;
+                } catch {
+                  beforeExists = false;
+                }
+              }
+
+              if (!beforeExists) {
+                const defaultBranch = context.payload.repository.default_branch;
+                base = execFileSync(
+                  "git",
+                  ["merge-base", after, `refs/remotes/origin/${defaultBranch}`],
+                  { encoding: "utf8" }
+                ).trim();
+              }
+
+              const shas = execFileSync(
+                "git",
+                ["rev-list", `${base}..${after}`],
+                { encoding: "utf8" }
+              ).trim().split("\n").filter(Boolean);
+
+              commits = shas.map(sha => ({
+                sha,
+                message: execFileSync(
+                  "git",
+                  ["show", "-s", "--format=%B", sha],
+                  { encoding: "utf8" }
+                )
+              }));
+            }
+
+            const issuePattern = /(^|[\s(])#([1-9]\d*)\b/;
+
+            for (const commit of commits) {
+              if (!issuePattern.test(commit.message)) {
+                failures.push(
+                  `Commit ${commit.sha.slice(0, 7)} is missing an issue reference.`
+                );
+              }
+            }
+
+            if (failures.length > 0) {
+              core.setFailed(failures.join("\n"));
+            } else {
+              core.info(
+                `${context.eventName}: checked ${commits.length} commit messages successfully.`
+              );
+            }
