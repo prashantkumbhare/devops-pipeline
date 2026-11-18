@@ -7,3 +7,8 @@ __pycache__/
 *.tfstate.*
 .terraform/
 release-output/
+
+# AWS trading demo local plans and overrides
+/infra/aws/*.tfplan
+/infra/aws/*.tfvars
+/infra/aws/*.tfvars.json
