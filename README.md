@@ -11,3 +11,5 @@ Status: planning complete; implementation starts with issue #1.
 First milestone: simulated trading REST API, PostgreSQL, Docker Compose, reusable GitHub Actions, published image and verified local deployment. Terraform, Ansible, observability and second-laptop deployment follow.
 
 Use synthetic data only. Each ticket includes acceptance criteria and an interview learning exercise.
+
+- [AWS Terraform deployment and verification](infra/aws/README.md)

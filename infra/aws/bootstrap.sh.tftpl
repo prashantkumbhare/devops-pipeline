@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+dnf -y install docker openssl
+systemctl enable --now docker
+
+install -d -m 0700 /etc/trading-demo
+if [[ ! -s /etc/trading-demo/password ]]; then
+  openssl rand -hex 24 > /etc/trading-demo/password
+fi
+{
+  printf 'POSTGRES_DB=trading\nPOSTGRES_USER=trading\nPOSTGRES_PASSWORD='
+  cat /etc/trading-demo/password
+} > /etc/trading-demo/postgres.env
+{
+  printf 'DB_HOST=trading-db\nDB_NAME=trading\nDB_USER=trading\nDB_PASSWORD='
+  cat /etc/trading-demo/password
+} > /etc/trading-demo/api.env
+
+cat > /usr/local/sbin/trading-demo-start <<'START'
+#!/usr/bin/env bash
+set -euo pipefail
+
+retry() {
+  local attempts=$1 delay=$2 i
+  shift 2
+  for ((i = 1; i <= attempts; i++)); do
+    if "$@"; then return 0; fi
+    if ((i < attempts)); then sleep "$delay"; fi
+  done
+  return 1
+}
+
+db_image='postgres:17-alpine'
+api_image='${app_image}'
+docker image inspect "$db_image" >/dev/null 2>&1 || retry 5 10 docker pull "$db_image"
+docker image inspect "$api_image" >/dev/null 2>&1 || retry 5 10 docker pull "$api_image"
+docker network inspect trading-demo >/dev/null 2>&1 || docker network create trading-demo
+docker volume create trading-demo-db
+for container in trading-api trading-db; do
+  if docker container inspect "$container" >/dev/null 2>&1; then
+    docker rm -f "$container"
+  fi
+done
+docker run --detach --name trading-db --network trading-demo \
+  --restart unless-stopped --log-opt max-size=5m --log-opt max-file=2 \
+  --env-file /etc/trading-demo/postgres.env \
+  --volume trading-demo-db:/var/lib/postgresql/data "$db_image"
+
+# Use TCP so the initialisation-only PostgreSQL Unix socket is not counted as ready.
+retry 45 2 docker exec trading-db pg_isready -h 127.0.0.1 -U trading -d trading
+
+docker run --detach --name trading-api --network trading-demo \
+  --restart unless-stopped --log-opt max-size=5m --log-opt max-file=2 \
+  --env-file /etc/trading-demo/api.env \
+  --publish 127.0.0.1:8000:8000 "$api_image"
+
+retry 45 2 curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8000/health/ready
+START
+
+chmod 0755 /usr/local/sbin/trading-demo-start
+
+cat > /etc/systemd/system/trading-demo.service <<'UNIT'
+[Unit]
+Description=Trading API lab (FastAPI and PostgreSQL)
+Requires=docker.service
+Wants=network-online.target
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/trading-demo-start
+ExecStop=-/usr/bin/docker stop trading-api trading-db
+RemainAfterExit=yes
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now trading-demo.service
